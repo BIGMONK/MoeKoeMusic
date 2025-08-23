@@ -1,0 +1,50 @@
+name: Sync Fork (Force Overwrite - Ignore Workflows)
+
+on:
+  schedule:
+    - cron: '0 2 * * *'   # 每天凌晨 2 点自动同步
+  workflow_dispatch:       # 允许手动触发
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout fork repo
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Set Git identity
+        run: |
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global user.name "github-actions[bot]"
+
+      - name: Add upstream
+        run: |
+          git remote add upstream https://github.com/maotoumao/MusicFree.git
+          git fetch upstream --prune
+          git fetch origin --prune
+
+      - name: Force sync all branches (ignore workflows)
+        run: |
+          for branch in $(git branch -r | grep 'upstream/' | grep -v 'HEAD' | sed 's|upstream/||'); do
+            echo "🔄 Force syncing branch: $branch"
+
+            if git show-ref --verify --quiet refs/heads/$branch; then
+              git checkout $branch
+            else
+              git checkout -b $branch
+            fi
+
+            git reset --hard upstream/$branch
+
+            # 删除 upstream 的 workflow 文件，避免 push 被拒绝
+            rm -rf .github/workflows/*
+
+            # 提交空 commit 避免 push 被拒
+            git commit --allow-empty -am "Sync branch $branch (workflow files ignored)"
+
+            # 推送到 fork
+            git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} $branch --force
+          done
