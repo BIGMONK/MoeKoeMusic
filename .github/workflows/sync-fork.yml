@@ -50,5 +50,5 @@ jobs:
           done
           
           git checkout actions-branch
-          git merge main
+          git merge origin/main
           git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} actions-branch --force
