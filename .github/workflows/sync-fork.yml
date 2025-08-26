@@ -48,3 +48,6 @@ jobs:
             # 推送到 fork
             git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} $branch --force
           done
+          
+          git checkout actions-branch
+          git push https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }} actions-branch --force
