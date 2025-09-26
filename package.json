@@ -1,6 +1,6 @@
 {
   "name": "moekoemusic",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "homepage": "https://github.com/iAJue/MoeKoeMusic",
   "main": "electron/main.js",
   "scripts": {
@@ -140,7 +140,7 @@
   },
   "blog": "MoeJue.cn",
   "license": "MIT",
-  "description": "An open-source KuGou third-party music client",
+  "description": "MoeKoe Music",
   "devDependencies": {
     "@vitejs/plugin-vue": "^5.1.4",
     "@vue/compiler-sfc": "^3.5.12",

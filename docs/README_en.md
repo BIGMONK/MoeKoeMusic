@@ -24,7 +24,7 @@ An open-source, concise, and aesthetically pleasing third-party client for KuGou
   </p>
 </p>
 
-![images]( https://github.com/iAJue/MoeKoeMusic/raw/main/images/5.png )
+![images]( https://github.com/iAJue/MoeKoeMusic/raw/main/images/1.png )
 
 ## ❤️ Preface
 
@@ -232,17 +232,17 @@ In order to avoid disrupting the structure of the original project and facilitat
 - [Apple Music]( https://music.apple.com )
 - [YouTube Music]( https://music.youtube.com )
 - [YesPlayMusic]( https://github.com/qier222/YesPlayMusic )
--[Cool Dog Music](https://kugou.com/ )
+- [Cool Dog Music](https://kugou.com/ )
 
 ##  🖼️  screenshot
 
-![image]( https://github.com/iAJue/MoeKoeMusic/raw/main/images/1.png )
-![image]( https://github.com/iAJue/MoeKoeMusic/raw/main/images/2.png )
-![image]( https://github.com/iAJue/MoeKoeMusic/raw/main/images/3.png )
-![image]( https://github.com/iAJue/MoeKoeMusic/raw/main/images/4.png )
-![image]( https://github.com/iAJue/MoeKoeMusic/raw/main/images/5.png )
-![image]( https://github.com/iAJue/MoeKoeMusic/raw/main/images/6.png )
-
+![image](https://github.com/iAJue/MoeKoeMusic/raw/main/images/2.png)
+![image](https://github.com/iAJue/MoeKoeMusic/raw/main/images/3.png)
+![image](https://github.com/iAJue/MoeKoeMusic/raw/main/images/4.png)
+![image](https://github.com/iAJue/MoeKoeMusic/raw/main/images/5.png)
+![image](https://github.com/iAJue/MoeKoeMusic/raw/main/images/6.png)
+![image](https://github.com/iAJue/MoeKoeMusic/raw/main/images/7.png)
+![image](https://github.com/iAJue/MoeKoeMusic/raw/main/images/8.png)
 
 ## 🗓️ Star History
 
