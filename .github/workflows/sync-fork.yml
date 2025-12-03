@@ -3,7 +3,7 @@ name: Sync Fork
 on:
   schedule:
     - cron: "0 2 * * *"  # 每天凌晨 2 点（UTC）
-  workflow_dispatch:      # 手动触发
+  workflow_dispatch:
 
 jobs:
   sync:
@@ -20,33 +20,43 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Add upstream remote
+      - name: Add upstream
         run: |
-          git remote add upstream https://github.com/MoeKoeMusic/MoeKoeMusic.git
-          git fetch upstream
+          git remote add upstream https://github.com/MoeKoeMusic/MoeKoeMusic.git || true
+          git fetch upstream --prune
+          git fetch origin --prune
 
-      - name: Sync main branch
+      - name: Sync main
         run: |
+          echo "🔄 Sync main"
           git checkout main
-          git merge upstream/main --no-edit
+          git merge upstream/main --no-edit || true
           git push origin main
 
-      - name: Sync other branches
+      - name: Sync all other branches
         run: |
-          for branch in $(git for-each-ref --format='%(refname:strip=3)' refs/remotes/upstream); do
+          echo "🔄 Syncing other branches..."
+
+          # 获取所有 upstream 分支名（不包含 HEAD）
+          for branch in $(git branch -r | grep 'upstream/' | grep -v 'HEAD' | sed 's|upstream/||'); do
+
             if [ "$branch" = "main" ]; then
               continue
             fi
 
-            echo "🔄 Syncing branch: $branch"
+            echo "➡️ Sync branch: $branch"
 
+            # 本地分支存在则 checkout，否则创建
             if git show-ref --verify --quiet refs/heads/$branch; then
               git checkout $branch
             else
               git checkout -b $branch
             fi
 
+            # 合并上游分支
             git merge upstream/$branch --no-edit || true
+
+            # 推送
             git push origin $branch
           done
 
@@ -54,11 +64,15 @@ jobs:
         run: |
           echo "🔀 Merge main into actions-branch"
 
+          # actions-branch 是否存在
           if git show-ref --verify --quiet refs/heads/actions-branch; then
             git checkout actions-branch
           else
             git checkout -b actions-branch
           fi
 
+          # 合并 main 到 actions-branch
           git merge origin/main --no-edit || true
+
+          # 推送
           git push origin actions-branch
