@@ -1,0 +1,65 @@
+name: Sync Fork（同步上游代码）
+
+on:
+  schedule:
+    - cron: "0 2 * * *"      # 每天凌晨 2 点
+  workflow_dispatch:          # 允许手动触发
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout fork
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Add upstream
+        run: |
+          git remote add upstream https://github.com/MoeKoeMusic/MoeKoeMusic.git
+          git fetch upstream --prune
+          git fetch origin --prune
+
+      - name: Sync main branch
+        run: |
+          git checkout main
+          git merge upstream/main --no-edit || true
+          git push origin main
+
+      - name: Sync all other upstream branches
+        run: |
+          for branch in $(git for-each-ref --format='%(refname:strip=3)' refs/remotes/upstream); do
+            if [ "$branch" = "main" ]; then
+              continue
+            fi
+
+            echo "🔄 Syncing branch: $branch"
+
+            if git show-ref --verify --quiet refs/heads/$branch; then
+              git checkout $branch
+            else
+              git checkout -b $branch
+            fi
+
+            git merge upstream/$branch --no-edit || true
+            git push origin $branch
+          done
+
+      - name: Merge main → actions-branch
+        run: |
+          echo "🔀 Merge main into actions-branch"
+
+          if git show-ref --verify --quiet refs/heads/actions-branch; then
+            git checkout actions-branch
+          else
+            git checkout -b actions-branch
+          fi
+
+          git merge origin/main --no-edit || true
+          git push origin actions-branch
