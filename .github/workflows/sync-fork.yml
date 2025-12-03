@@ -1,38 +1,37 @@
-name: Sync Fork（同步上游代码）
+name: Sync Fork
 
 on:
   schedule:
-    - cron: "0 2 * * *"      # 每天凌晨 2 点
-  workflow_dispatch:          # 允许手动触发
+    - cron: "0 2 * * *"  # 每天凌晨 2 点（UTC）
+  workflow_dispatch:      # 手动触发
 
 jobs:
   sync:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout fork
+      - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
 
-      - name: Set git identity
+      - name: Set up git
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Add upstream
+      - name: Add upstream remote
         run: |
           git remote add upstream https://github.com/MoeKoeMusic/MoeKoeMusic.git
-          git fetch upstream --prune
-          git fetch origin --prune
+          git fetch upstream
 
       - name: Sync main branch
         run: |
           git checkout main
-          git merge upstream/main --no-edit || true
+          git merge upstream/main --no-edit
           git push origin main
 
-      - name: Sync all other upstream branches
+      - name: Sync other branches
         run: |
           for branch in $(git for-each-ref --format='%(refname:strip=3)' refs/remotes/upstream); do
             if [ "$branch" = "main" ]; then
