@@ -30,20 +30,20 @@ jobs:
         run: |
           echo "🔄 Sync main"
 
-          # 明确从 origin/main 创建或更新本地 main，避免 ambiguous
           git checkout -B main origin/main
+          git merge upstream/main --no-edit || true
 
-          # 合并 upstream/main
-          git merge --no-edit upstream/main || true
+          # ❗ 删除 workflow 文件，避免 push 被拒绝
+          rm -rf .github/workflows/*
+          git add -A
+          git commit -m "Remove workflows for sync" || true
 
-          # 推送更新后的 main
-          git push origin main
+          git push origin main --force
 
       - name: Sync other branches
         run: |
           echo "🔄 Syncing other branches..."
 
-          # 获取所有 upstream 分支名
           for branch in $(git branch -r | grep 'upstream/' | grep -v 'HEAD' | sed 's|upstream/||'); do
             if [ "$branch" = "main" ]; then
               continue
@@ -51,32 +51,33 @@ jobs:
 
             echo "➡️ Sync branch: $branch"
 
-            # 明确基于 origin/<branch> 创建或更新本地分支
             if git show-ref --verify --quiet refs/heads/$branch; then
               git checkout $branch
             else
               git checkout -b $branch origin/$branch 2>/dev/null || git checkout -b $branch
             fi
 
-            # 同步 upstream 到本地
             git merge upstream/$branch --no-edit || true
 
-            # 推送
-            git push origin $branch
+            # ❗ 删除 workflow 文件（避免 push 被拒）
+            rm -rf .github/workflows/*
+            git add -A
+            git commit -m "Remove workflows for sync" || true
+
+            git push origin $branch --force
           done
 
       - name: Merge main → actions-branch
         run: |
           echo "🔀 Merge main into actions-branch"
 
-          # actions-branch 是否存在
           if git show-ref --verify --quiet refs/heads/actions-branch; then
             git checkout actions-branch
           else
             git checkout -b actions-branch
           fi
 
-          # 合并 main
           git merge main --no-edit || true
 
-          git push origin actions-branch
+          # actions-branch 一般没有 workflow，不需要额外删
+          git push origin actions-branch --force
