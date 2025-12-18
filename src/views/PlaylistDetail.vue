@@ -6,14 +6,15 @@
                 :src="isArtist ? ($getCover(detail.sizable_avatar, 480)) : (detail.pic ? $getCover(detail.pic, 480) : './assets/images/live.png')" />
             <div class="info">
                 <h1 class="title">{{ isArtist ? detail.author_name : detail.name }}</h1>
-                <p class="subtitle" v-if="!isArtist">{{ detail.publish_date }} | {{ detail.list_create_username }}</p>
+                <p class="subtitle" v-if="!isArtist && !isAlbum">{{ detail.publish_date }} | {{ detail.list_create_username }}</p>
+                <p class="subtitle" v-if="isAlbum">{{ detail.publish_date }}</p>
                 <div class="stats" v-if="isArtist">
                     <span>歌曲: {{ detail.song_count }}</span>
                     <span>专辑: {{ detail.album_count }}</span>
                     <span>MV: {{ detail.mv_count }}</span>
                     <span>粉丝: {{ detail.fansnums }}</span>
                 </div>
-                <p class="meta" v-if="!isArtist">{{ detail.tags }}</p>
+                <p class="meta" v-if="!isArtist && !isAlbum">{{ detail.tags }}</p>
                 <div class="description">{{ isArtist ? detail.intro : detail.intro }}</div>
                 <div class="actions">
                     <button class="primary-btn" @click="addPlaylistToQueue($event)">
@@ -22,11 +23,11 @@
                     <button class="follow-btn" v-if="isArtist" @click="toggleFollow" :disabled="followLoading">
                         <i class="fas fa-heart"></i> {{ isFollowed ? '已关注' : '关注' }}
                     </button>
-                    <button class="fav-btn" v-if="!isArtist && detail.list_create_userid != MoeAuth.UserInfo?.userid && !route.query.listid"
+                    <button class="fav-btn" v-if="!isArtist && !isAlbum && detail.list_create_userid != MoeAuth.UserInfo?.userid && !route.query.listid"
                         @click="toggleFavorite(detail.list_create_gid)" :class="{ 'active': isPlaylistFavorited }">
                         <i class="fas fa-heart"></i>
                     </button>
-                    <div class="more-btn-container" v-if="!isArtist">
+                    <div class="more-btn-container" v-if="!isArtist && !isAlbum">
                         <button class="more-btn" @click="toggleDropdown">
                             <i class="fas fa-ellipsis-h"></i>
                         </button>
@@ -49,8 +50,8 @@
         </div>
 
         <!-- 导航按钮 -->
-        <i class="location-arrow fas fa-location-arrow" @click="scrollToItem" :title="t('dang-qian-bo-fang-ge-qu')"></i>
-        <img :src="`./assets/images/lemon.gif`" class="scroll-bottom-img" @click="scrollToFirstItem" :title="t('fan-hui-ding-bu')"/>
+        <i class="location-arrow fas fa-crosshairs" @click="scrollToItem" :title="t('dang-qian-bo-fang-ge-qu')"></i>
+        <i class="scroll-bottom-img fas fa-angle-double-up" @click="scrollToFirstItem" :title="t('fan-hui-ding-bu')"></i>
 
         <!-- 歌曲列表 -->
         <div class="track-list-container">
@@ -126,7 +127,12 @@
                         <div class="track-checkbox" v-if="batchSelectionMode">
                             <input type="checkbox" :checked="selectedTracks.includes(index)" @click.stop="selectTrack(index, $event)">
                         </div>
-                        <div class="track-number" v-else>{{ index + 1 }}</div>
+                        <div class="track-number" v-else :class="{ 'current': isCurrentSong(item.hash) }">
+                            <div v-if="isCurrentPlaying(item.hash)" class="sound-wave">
+                                <span></span><span></span><span></span>
+                            </div>
+                            <span v-else>{{ index + 1 }}</span>
+                        </div>
 
                         <!-- 网格模式封面 -->
                         <div class="track-cover" v-if="viewMode === 'grid'">
@@ -137,10 +143,14 @@
                         </div>
 
                         <!-- 歌曲信息 -->
-                        <div class="track-title" :title="item.name">{{ item.name }}
-                            <span v-if="item.privilege == 10" class="icon vip-icon">VIP</span>
-                            <span v-if="item.isHQ" class="icon sq-icon">HQ</span>
-                            <span v-else-if="item.isSQ" class="icon sq-icon">SQ</span>
+                        <div class="track-title-container">
+                            <div class="track-title" :title="item.name" :class="{ 'current': isCurrentSong(item.hash) }">{{ item.name }}
+                                <span v-if="item.privilege == 10" class="icon vip-icon">VIP</span>
+                                <span v-if="item.isHQ" class="icon sq-icon">HQ</span>
+                                <span v-else-if="item.isSQ" class="icon sq-icon">SQ</span>
+                                <span v-if="item.mvhash" class="icon mv-icon">MV</span>
+                            </div>
+                            <div v-if="viewMode === 'grid' && item.remark" :title="item.remark" class="track-remark">{{ item.remark }}</div>
                         </div>
                         <div class="track-artist" :title="item.author">{{ item.author }}</div>
                         <div class="track-album" :title="item.album">{{ item.album }}</div>
@@ -189,8 +199,9 @@ const MoeAuth = MoeAuthStore();
 const router = useRouter();
 const route = useRoute();
 
-// 判断是歌手还是歌单
+// 判断是歌手还是歌单还是专辑
 const isArtist = computed(() => !!route.query.singerid);
+const isAlbum = computed(() => !!route.query.albumid);
 
 // 通用状态
 const detail = ref({});
@@ -298,18 +309,21 @@ onBeforeUnmount(() => {
     document.removeEventListener('click', handleClickOutside);
 });
 
-watch(() => [route.query.global_collection_id, route.query.singerid], () => {
+watch(() => [route.query.global_collection_id, route.query.singerid, route.query.albumid], () => {
     loadData();
 });
 
 const loadData = async () => {
-    if(!route.query.global_collection_id && !route.query.singerid) {
+    if(!route.query.global_collection_id && !route.query.singerid && !route.query.albumid) {
         router.push('/library');
         return;
     }
     if (isArtist.value) {
         getArtistInfo();
         fetchArtistSongs();
+    } else if (isAlbum.value) {
+        getAlbumInfo();
+        fetchAlbumSongs();
     } else {
         updateFavoriteStatus();
         await fetchPlaylistTracks();
@@ -330,6 +344,28 @@ const getArtistInfo = async () => {
         }
     } catch (error) {
         console.error('获取歌手信息失败:', error);
+    }
+};
+
+// 获取专辑信息
+const getAlbumInfo = async () => {
+    try {
+        const response = await get('/album/detail', {
+            id: route.query.albumid
+        });
+        if (response.status === 1 && response.data && response.data.length > 0) {
+            const albumData = response.data[0]; // 数据在 data[0] 中
+            detail.value = {
+                name: albumData.album_name || '',
+                pic: albumData.sizable_cover || albumData.cover || '',
+                publish_date: albumData.publish_date || '',
+                intro: albumData.intro || '',
+                song_count: 0, // 专辑详情接口没有返回歌曲数量，从歌曲列表接口获取
+                id: route.query.albumid
+            };
+        }
+    } catch (error) {
+        console.error('获取专辑信息失败:', error);
     }
 };
 
@@ -356,6 +392,7 @@ const fetchArtistSongs = async () => {
             .filter(track => !!track.hash)
             .map(track => ({
                 hash: track.hash || '',
+                remark: track.remark || '',
                 OriSongName: track.audio_name + ' - ' + track.author_name,
                 name: track.audio_name || '',
                 author: track.author_name || '',
@@ -365,6 +402,7 @@ const fetchArtistSongs = async () => {
                 isSQ: track.hash_flac !== '',
                 isHQ: track.hash_320 !== '',
                 privilege: track.privilege || 0,
+                mvhash: track.mvhash || '',
                 originalData: track
             }));
 
@@ -374,6 +412,70 @@ const fetchArtistSongs = async () => {
 
             // 判断是否还有更多数据
             hasMore.value = rawSongs.length >= curPageSize && tracks.value.length < totalCount.value;
+        }
+    } catch (error) {
+        window.$modal.alert(t('ge-qu-shu-ju-cuo-wu'));
+        return;
+    }
+
+    loading.value = false;
+
+    ensureBufferData();
+};
+
+// 获取专辑歌曲
+const fetchAlbumSongs = async () => {
+    requestCount.value = 0;
+    hasMore.value = true;
+
+    try {
+        const albumPageSize = 50; // 专辑固定使用 pagesize=50
+        const curPage = 1;
+
+        const response = await get('/album/songs', {
+            id: route.query.albumid,
+            page: curPage,
+            pagesize: albumPageSize
+        });
+
+        if (response.status === 1) {
+            totalCount.value = response.data.total || 0;
+            // 更新专辑歌曲数量
+            if (detail.value.song_count === 0) {
+                detail.value.song_count = response.data.total || 0;
+            }
+            const rawSongs = response.data.songs || [];
+            const formattedTracks = rawSongs
+            .filter(track => track.audio_info?.hash)
+            .map(track => {
+                const audioInfo = track.audio_info;
+                const base = track.base;
+                const albumInfo = track.album_info;
+                const mvHash = track.mvdata && track.mvdata.length > 0 ? track.mvdata[0].hash : '';
+
+                return {
+                    hash: audioInfo.hash || '',
+                    remark: track.extra?.remark || '',
+                    OriSongName: base.audio_name + ' - ' + base.author_name,
+                    name: base.audio_name || '',
+                    author: base.author_name || '',
+                    album: albumInfo?.album_name || '',
+                    cover: track.trans_param?.union_cover?.replace("{size}", 480) || '',
+                    timelen: audioInfo.duration || 0,
+                    isSQ: !!audioInfo.hash_flac,
+                    isHQ: !!audioInfo.hash_320,
+                    privilege: track.copyright?.privilege || 0,
+                    mvhash: mvHash,
+                    originalData: track
+                };
+            });
+
+            tracks.value = formattedTracks;
+            filteredTracks.value = formattedTracks;
+            requestCount.value++; // 增加请求计数
+
+            // 判断是否还有更多数据
+            hasMore.value = rawSongs.length >= albumPageSize && tracks.value.length < totalCount.value;
         }
     } catch (error) {
         window.$modal.alert(t('ge-qu-shu-ju-cuo-wu'));
@@ -410,6 +512,7 @@ const fetchPlaylistTracks = async () => {
                 const nameParts = track.name.split(' - ');
                 return {
                     hash: track.hash || '',
+                    remark: track.remark || '',
                     OriSongName: track.name,
                     name: nameParts.length > 1 ? nameParts[1] : track.name,
                     author: nameParts.length > 1 ? nameParts[0] : '',
@@ -419,6 +522,7 @@ const fetchPlaylistTracks = async () => {
                     isSQ: track.relate_goods && track.relate_goods.length > 2,
                     isHQ: track.relate_goods && track.relate_goods.length > 1,
                     privilege: track.privilege || 0,
+                    mvhash: track.mvhash || '',
                     originalData: track
                 };
             });
@@ -472,6 +576,7 @@ const loadMoreTracks = async () => {
                     isSQ: track.hash_flac !== '',
                     isHQ: track.hash_320 !== '',
                     privilege: track.privilege || 0,
+                    mvhash: track.mvhash || '',
                     originalData: track
                 }));
 
@@ -479,6 +584,51 @@ const loadMoreTracks = async () => {
                 filteredTracks.value = tracks.value;
                 requestCount.value++; // 增加请求计数
                 hasMore.value = rawSongs.length >= curPageSize && tracks.value.length < totalCount.value;
+            } else {
+                hasMore.value = false;
+            }
+        } else if (isAlbum.value) {
+            // 加载更多专辑歌曲
+            const albumPageSize = 50; // 专辑固定使用 pagesize=50
+            const curPage = Math.floor(tracks.value.length / albumPageSize) + 1;
+
+            const response = await get('/album/songs', {
+                id: route.query.albumid,
+                page: curPage,
+                pagesize: albumPageSize
+            });
+
+            if (response.status === 1 && response.data.songs?.length > 0) {
+                const rawSongs = response.data.songs;
+                const formattedTracks = rawSongs
+                .filter(track => track.audio_info?.hash)
+                .map(track => {
+                    const audioInfo = track.audio_info;
+                    const base = track.base;
+                    const albumInfo = track.album_info;
+                    const mvHash = track.mvdata && track.mvdata.length > 0 ? track.mvdata[0].hash : '';
+
+                    return {
+                        hash: audioInfo.hash || '',
+                        remark: track.extra?.remark || '',
+                        OriSongName: base.audio_name + ' - ' + base.author_name,
+                        name: base.audio_name || '',
+                        author: base.author_name || '',
+                        album: albumInfo?.album_name || '',
+                        cover: track.trans_param?.union_cover?.replace("{size}", 480) || '',
+                        timelen: audioInfo.duration || 0,
+                        isSQ: !!audioInfo.hash_flac,
+                        isHQ: !!audioInfo.hash_320,
+                        privilege: track.copyright?.privilege || 0,
+                        mvhash: mvHash,
+                        originalData: track
+                    };
+                });
+
+                tracks.value = [...tracks.value, ...formattedTracks];
+                filteredTracks.value = tracks.value;
+                requestCount.value++; // 增加请求计数
+                hasMore.value = rawSongs.length >= albumPageSize && tracks.value.length < totalCount.value;
             } else {
                 hasMore.value = false;
             }
@@ -510,6 +660,7 @@ const loadMoreTracks = async () => {
                         isSQ: track.relate_goods && track.relate_goods.length > 2,
                         isHQ: track.relate_goods && track.relate_goods.length > 1,
                         privilege: track.privilege || 0,
+                        mvhash: track.mvhash || '',
                         originalData: track
                     };
                 });
@@ -713,13 +864,14 @@ const sharePlaylist = () => {
 // 右键菜单
 const showContextMenu = (event, song) => {
     if (contextMenuRef.value) {
-        contextMenuRef.value.openContextMenu(event, { 
-            OriSongName: song.OriSongName, 
-            FileHash: song.hash, 
+        contextMenuRef.value.openContextMenu(event, {
+            OriSongName: song.OriSongName,
+            FileHash: song.hash,
             fileid: song.originalData.fileid,
             userid: isArtist.value ? null : detail.value.list_create_userid,
             timeLength: song.timelen,
             cover: song.cover,
+            mvhash: song.mvhash,
         }, isArtist.value ? null : detail.value.listid);
     }
 };
@@ -866,7 +1018,15 @@ const toggleSelectAll = () => {
 };
 
 // 根据字段排序
-const sortTracks = (field) => {
+const sortTracks = async (field) => {
+    if (hasMore.value) {
+        isSearching.value = true;
+        try {
+            await loadAndAppendRemainingTracks();
+        } finally {
+            isSearching.value = false;
+        }
+    }
     if (sortField.value === field) {
         sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc';
     } else {
@@ -922,6 +1082,16 @@ const changeArtistSort = (sortType) => {
         // 重新获取歌手歌曲
         fetchArtistSongs();
     }
+};
+
+// 判断是否为当前歌曲（不管是否正在播放）
+const isCurrentSong = (hash) => {
+    return props.playerControl?.currentSong?.hash === hash;
+};
+
+// 判断是否为当前正在播放的歌曲
+const isCurrentPlaying = (hash) => {
+    return isCurrentSong(hash) && props.playerControl?.playing;
 };
 </script>
 
@@ -1280,13 +1450,78 @@ const changeArtistSort = (sortType) => {
     font-weight: bold;
     margin-right: 10px;
     width: 30px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    height: 20px;
+}
+
+.track-number.current {
+    color: var(--primary-color);
+}
+
+.track-title.current {
+    color: var(--primary-color);
+}
+
+/* 声波动画 */
+.sound-wave {
+    display: flex;
+    align-items: flex-end;
+    gap: 2px;
+    height: 16px;
+}
+
+.sound-wave span {
+    width: 3px;
+    background-color: var(--primary-color);
+    animation: wave 0.8s ease-in-out infinite;
+}
+
+.sound-wave span:nth-child(1) {
+    height: 6px;
+    animation-delay: 0s;
+}
+
+.sound-wave span:nth-child(2) {
+    height: 12px;
+    animation-delay: 0.2s;
+}
+
+.sound-wave span:nth-child(3) {
+    height: 8px;
+    animation-delay: 0.4s;
+}
+
+@keyframes wave {
+    0%, 100% {
+        transform: scaleY(0.5);
+    }
+    50% {
+        transform: scaleY(1);
+    }
+}
+
+.track-title-container {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
 }
 
 .track-title {
-    flex: 2;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.track-remark {
+    font-size: 12px;
+    color: #999;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
 }
 
 .track-artist {
@@ -1327,6 +1562,10 @@ const changeArtistSort = (sortType) => {
     color: #0094ff;
 }
 
+.mv-icon {
+    color: #ff1744;
+}
+
 .queue-play-btn {
     background: none;
     border: none;
@@ -1363,18 +1602,18 @@ const changeArtistSort = (sortType) => {
     right: 14px;
     z-index: 1;
     cursor: pointer;
-    font-size: 37px;
+    font-size: 20px;
     color: var(--primary-color);
 }
 
 .scroll-bottom-img {
     position: fixed;
-    width: 60px;
-    height: 60px;
-    bottom: 110px;
-    right: 88px;
+    bottom: 100px;
+    right: 10px;
     z-index: 1;
     cursor: pointer;
+    font-size: 20px;
+    color: var(--primary-color);
 }
 
 /* 下拉菜单 */
@@ -1567,11 +1806,26 @@ const changeArtistSort = (sortType) => {
 }
 
 /* 调整封面视图下的其他元素样式 */
-.li.cover-view .track-title {
+.li.cover-view .track-title-container {
     flex: 2;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.li.cover-view .track-title {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+}
+
+.li.cover-view .track-remark {
+    font-size: 12px;
+    color: #999;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    margin-top: 2px;
 }
 
 .li.cover-view .track-artist {
