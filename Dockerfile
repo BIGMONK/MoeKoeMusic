@@ -25,7 +25,7 @@ WORKDIR /app
 RUN apk add --no-cache nginx
 
 # Copy API code
-COPY ./api ./api
+COPY api* ./api
 # Install API dependencies
 WORKDIR /app/api
 RUN npm install --production
