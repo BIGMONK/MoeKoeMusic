@@ -25,11 +25,23 @@ WORKDIR /app
 RUN apk add --no-cache nginx
 
 # Copy API code
-COPY api*/ ./api/
-RUN ls -la /app
+# 复制所有文件（包含 api 或 api @ xxx）
+COPY . .
+
+# 统一重命名
+RUN if [ -d "api" ]; then \
+      echo "✅ found api"; \
+    elif ls -d api\ @* 1>/dev/null 2>&1; then \
+      mv api\ @* api; \
+    else \
+      echo "❌ api 目录不存在"; \
+      exit 1; \
+    fi
+
+# 验证
+RUN ls -la /app/api
 # Install API dependencies
 WORKDIR /app/api
-RUN ls -la 
 RUN npm install --production
 # Reset WORKDIR to /app
 WORKDIR /app 
