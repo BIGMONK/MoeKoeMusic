@@ -29,10 +29,11 @@ COPY api* ./api
 RUN ls -la /app
 # Install API dependencies
 WORKDIR /app/api
+RUN ls -la 
 RUN npm install --production
 # Reset WORKDIR to /app
 WORKDIR /app 
-
+RUN ls -la 
 # Copy built frontend static assets from the builder stage
 COPY --from=frontend-builder /app/dist/ ./dist/
 
