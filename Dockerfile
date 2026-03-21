@@ -26,6 +26,7 @@ RUN apk add --no-cache nginx
 
 # Copy API code
 COPY api* ./api
+RUN ls -la /app
 # Install API dependencies
 WORKDIR /app/api
 RUN npm install --production
