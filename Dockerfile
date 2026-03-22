@@ -25,21 +25,13 @@ WORKDIR /app
 RUN apk add --no-cache nginx
 
 # Copy API code
-# Clone API submodule if not present
-# 如果本地 api/ 为空（子模块未下载），则从远程克隆
-COPY ./api ./api_temp
-RUN if [ "$(ls -A ./api_temp)" ]; then \
-        mv ./api_temp ./api; \
-    else \
-        rm -rf ./api_temp && \
-        git clone --depth 1 https://github.com/MakcRe/KuGouMusicApi ./api; \
-    fi
+COPY ./api ./api
 # Install API dependencies
 WORKDIR /app/api
 RUN npm install --production
 # Reset WORKDIR to /app
 WORKDIR /app 
-RUN ls -la 
+
 # Copy built frontend static assets from the builder stage
 COPY --from=frontend-builder /app/dist/ ./dist/
 
