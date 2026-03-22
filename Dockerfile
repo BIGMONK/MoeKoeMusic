@@ -25,21 +25,15 @@ WORKDIR /app
 RUN apk add --no-cache nginx
 
 # Copy API code
-# 复制所有文件（包含 api 或 api @ xxx）
-COPY . .
-
-# 统一重命名
-RUN if [ -d "api" ]; then \
-      echo "✅ found api"; \
-    elif ls -d api\ @* 1>/dev/null 2>&1; then \
-      mv api\ @* api; \
+# Clone API submodule if not present
+# 如果本地 api/ 为空（子模块未下载），则从远程克隆
+COPY ./api ./api_temp
+RUN if [ "$(ls -A ./api_temp)" ]; then \
+        mv ./api_temp ./api; \
     else \
-      echo "❌ api 目录不存在"; \
-      exit 1; \
+        rm -rf ./api_temp && \
+        git clone --depth 1 https://github.com/MakcRe/KuGouMusicApi ./api; \
     fi
-
-# 验证
-RUN ls -la /app/api
 # Install API dependencies
 WORKDIR /app/api
 RUN npm install --production
