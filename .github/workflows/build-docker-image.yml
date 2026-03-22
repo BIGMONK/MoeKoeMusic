@@ -17,6 +17,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          # submodules: true 会同步所有子模块
+          # 如果有嵌套子模块，可以使用 recursive
+          submodules: 'recursive'
 
       # 登录 Docker Hub
       - name: Login to Docker Hub
