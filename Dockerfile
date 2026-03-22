@@ -22,12 +22,13 @@ FROM node:20-alpine
 WORKDIR /app
 
 # Install Nginx
-RUN apk add --no-cache nginx
+RUN apk add --no-cache nginx iproute2
 
 # Copy API code
 COPY ./api ./api
 # Install API dependencies
 WORKDIR /app/api
+RUN ls -la 
 RUN npm install --production
 # Reset WORKDIR to /app
 WORKDIR /app 
@@ -47,6 +48,11 @@ COPY nginx.conf /etc/nginx/nginx.conf
 # Command to run both services
 # API runs from /app/api directory, frontend served by Nginx
 # CMD ["sh", "-c", "cd /app/api && node app.js & nginx -g 'daemon off;'"]
+# 替换第 51-53 行的 CMD
 CMD sh -c "\
+  echo 'Starting API server...'; \
+  cd /app/api && node app.js --platform=lite --port=6521 > /app/api.log 2>&1 & \
+  echo 'Starting Nginx...'; \
   echo 'client running @ http://127.0.0.1:8080/'; \
-  cd /app/api && node app.js & nginx -g 'daemon off;'"
+  nginx -g 'daemon off;'"
+
