@@ -9,6 +9,8 @@ export default function useLyricsHandler(t) {
     const SongTips = ref(t('zan-wu-ge-ci'));
     const lyricsMode = ref('translation'); // 'translation' 翻译模式 或 'romanization' 音译模式
     let currentLineIndex = 0;
+    let lyricsRequestId = 0;
+    let activeLyricsHash = null;
 
     // 显示/隐藏歌词
     const toggleLyrics = (hash, currentTime) => {
@@ -30,6 +32,9 @@ export default function useLyricsHandler(t) {
 
     // 获取歌词
     const getLyrics = async (hash) => {
+        const requestId = ++lyricsRequestId;
+        activeLyricsHash = hash;
+
         try {
             const settings = JSON.parse(localStorage.getItem('settings') || '{}');
             if (!showLyrics.value &&
@@ -39,6 +44,12 @@ export default function useLyricsHandler(t) {
 
             console.log('[LyricsHandler] 请求歌词……');
             const lyricSearchResponse = await get(`/search/lyric?hash=${hash}`);
+
+            // 若当前请求已经过期，直接忽略响应
+            if (requestId !== lyricsRequestId || activeLyricsHash !== hash) {
+                return false;
+            }
+
             if (lyricSearchResponse.status !== 200 || lyricSearchResponse.candidates.length === 0) {
                 SongTips.value = t('zan-wu-ge-ci');
                 return false;
@@ -46,6 +57,12 @@ export default function useLyricsHandler(t) {
 
             // 明确指定使用KRC格式
             const lyricResponse = await get(`/lyric?id=${lyricSearchResponse.candidates[0].id}&accesskey=${lyricSearchResponse.candidates[0].accesskey}&fmt=krc&decode=true`);
+
+            // 二次校验，避免旧请求覆盖新歌曲歌词
+            if (requestId !== lyricsRequestId || activeLyricsHash !== hash) {
+                return false;
+            }
+
             if (lyricResponse.status !== 200) {
                 SongTips.value = t('huo-qu-ge-ci-shi-bai');
                 return false;
@@ -55,7 +72,10 @@ export default function useLyricsHandler(t) {
             centerFirstLine();
             return true;
         } catch (error) {
-            SongTips.value = t('huo-qu-ge-ci-shi-bai');
+            // 仅在当前请求仍有效时更新提示，避免旧请求覆盖状态
+            if (requestId === lyricsRequestId && activeLyricsHash === hash) {
+                SongTips.value = t('huo-qu-ge-ci-shi-bai');
+            }
         }
     };
 
