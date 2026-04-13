@@ -28,6 +28,12 @@ jobs:
         with:
           username: ${{ vars.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+          
+      # 必须在 Buildx 之前安装 QEMU
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+        with:
+          platforms: arm64
 
       # 启用 Buildx（支持缓存 / 多架构）
       - name: Set up Docker Buildx
