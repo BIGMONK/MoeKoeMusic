@@ -1,10 +1,20 @@
 <template>
     <div class="ranking-container">
-        <div class="rank-selector">
-            <div v-for="rank in allRanks" :key="rank.rankid" class="rank-chip"
-                :class="{ active: selectedRankIds.includes(rank.rankid) }" @click="toggleRank(rank)">
-                {{ rank.rankname }}
+        <div class="rank-selector-shell" :class="{ collapsed: showRankSelectorToggle && !isRankSelectorExpanded }">
+            <div class="rank-selector-wrapper" :style="{ height: `${rankSelectorHeight}px` }">
+                <div ref="rankSelectorRef" class="rank-selector">
+                    <div v-for="rank in sortedRanks" :key="rank.rankid" class="rank-chip"
+                        :class="{ active: selectedRankIds.includes(rank.rankid) }" @click="toggleRank(rank)">
+                        {{ rank.rankname }}
+                    </div>
+                </div>
             </div>
+            <button v-if="showRankSelectorToggle" class="rank-selector-toggle"
+                :class="{ expanded: isRankSelectorExpanded }" type="button" :aria-expanded="isRankSelectorExpanded"
+                @click="toggleRankSelector">
+                <span>{{ isRankSelectorExpanded ? '收起' : '展开更多' }}</span>
+                <i class="fas fa-chevron-down"></i>
+            </button>
         </div>
 
         <div class="ranking-list">
@@ -63,7 +73,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { computed, ref, nextTick, onMounted, onBeforeUnmount } from 'vue';
 import { get } from '../utils/request';
 
 const props = defineProps({
@@ -73,8 +83,71 @@ const props = defineProps({
 const allRanks = ref([]);
 const displayedRanks = ref([]);
 const selectedRankIds = ref([]);
+const rankSelectorRef = ref(null);
+const showRankSelectorToggle = ref(false);
+const isRankSelectorExpanded = ref(false);
+const rankSelectorHeight = ref(0);
 const pagesize = 30;
 const rankPagination = ref({});
+let rankSelectorObserver = null;
+
+const sortedRanks = computed(() => {
+    const selectedOrder = new Map(selectedRankIds.value.map((rankId, index) => [rankId, index]));
+
+    return [...allRanks.value].sort((a, b) => {
+        const aIndex = selectedOrder.get(a.rankid);
+        const bIndex = selectedOrder.get(b.rankid);
+
+        if (aIndex !== undefined && bIndex !== undefined) {
+            return aIndex - bIndex;
+        }
+
+        if (aIndex !== undefined) {
+            return -1;
+        }
+
+        if (bIndex !== undefined) {
+            return 1;
+        }
+
+        return 0;
+    });
+});
+
+const updateRankSelectorHeight = async () => {
+    await nextTick();
+
+    const element = rankSelectorRef.value;
+    if (!element) return;
+
+    const chips = Array.from(element.querySelectorAll('.rank-chip'));
+    if (chips.length === 0) {
+        showRankSelectorToggle.value = false;
+        rankSelectorHeight.value = 0;
+        return;
+    }
+
+    const style = window.getComputedStyle(element);
+    const paddingBottom = parseFloat(style.paddingBottom) || 0;
+    const rowTops = [...new Set(chips.map(chip => chip.offsetTop))].sort((a, b) => a - b);
+    const chipHeight = chips[0].offsetHeight;
+    const collapsedHeight = rowTops.length > 1 ? rowTops[1] + chipHeight + paddingBottom : element.scrollHeight;
+
+    showRankSelectorToggle.value = rowTops.length > 2 && element.scrollHeight > collapsedHeight + 1;
+
+    if (!showRankSelectorToggle.value) {
+        isRankSelectorExpanded.value = false;
+    }
+
+    rankSelectorHeight.value = showRankSelectorToggle.value && !isRankSelectorExpanded.value
+        ? collapsedHeight
+        : element.scrollHeight;
+};
+
+const toggleRankSelector = async () => {
+    isRankSelectorExpanded.value = !isRankSelectorExpanded.value;
+    await updateRankSelectorHeight();
+};
 
 const saveSelectedRanks = () => {
     localStorage.setItem('selectedRankIds', JSON.stringify(selectedRankIds.value));
@@ -156,6 +229,8 @@ const toggleRank = async (rank) => {
         displayedRanks.value = displayedRanks.value.filter(r => r.rankid !== rank.rankid);
         delete rankPagination.value[rank.rankid];
     }
+
+    await updateRankSelectorHeight();
     saveSelectedRanks();
 };
 
@@ -230,6 +305,16 @@ const handlePlayClick = (event, songs) => {
 };
 
 onMounted(async () => {
+    rankSelectorObserver = new ResizeObserver(() => {
+        updateRankSelectorHeight();
+    });
+
+    if (rankSelectorRef.value) {
+        rankSelectorObserver.observe(rankSelectorRef.value);
+    }
+
+    window.addEventListener('resize', updateRankSelectorHeight);
+
     const response = await get('/rank/list');
     if (response.status === 1) {
         allRanks.value = response.data.info;
@@ -242,6 +327,13 @@ onMounted(async () => {
             await loadRandomRanks(allRanks.value, 4);
         }
     }
+
+    await updateRankSelectorHeight();
+});
+
+onBeforeUnmount(() => {
+    rankSelectorObserver?.disconnect();
+    window.removeEventListener('resize', updateRankSelectorHeight);
 });
 </script>
 
@@ -253,14 +345,34 @@ onMounted(async () => {
     padding: 20px;
 }
 
-.rank-selector {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
+.rank-selector-shell {
     padding: 16px;
     background: #ffffff;
     border-radius: 16px;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.rank-selector-wrapper {
+    overflow: hidden;
+    position: relative;
+    transition: height 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.rank-selector-shell.collapsed .rank-selector-wrapper::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    height: 40px;
+    pointer-events: none;
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0), #ffffff);
+}
+
+.rank-selector {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
 }
 
 .rank-chip {
@@ -280,6 +392,37 @@ onMounted(async () => {
     &.active {
         background: var(--primary-color) !important;
         color: white;
+    }
+}
+
+.rank-selector-toggle {
+    width: 100%;
+    margin-top: 12px;
+    padding: 10px 14px;
+    border: none;
+    border-radius: 12px;
+    background: #f6f7fb;
+    color: #666;
+    font-size: 13px;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+
+    &:hover {
+        color: var(--primary-color);
+        background: rgba(0, 0, 0, 0.04);
+    }
+
+    i {
+        transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    &.expanded i {
+        transform: rotate(180deg);
     }
 }
 
@@ -608,12 +751,21 @@ onMounted(async () => {
     }
 
     .rank-selector {
-        padding: 12px;
         gap: 8px;
+    }
+
+    .rank-selector-shell {
+        padding: 12px;
     }
 
     .rank-chip {
         padding: 6px 12px;
+        font-size: 12px;
+    }
+
+    .rank-selector-toggle {
+        margin-top: 10px;
+        padding: 8px 12px;
         font-size: 12px;
     }
 
