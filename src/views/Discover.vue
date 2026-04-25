@@ -37,15 +37,7 @@
         <RankingContent v-if="activeDiscoverTab === 'ranking'" :player-control="props.playerControl" />
 
         <template v-else-if="isCardView">
-            <div v-if="isLoading" class="skeleton-grid">
-                <div class="skeleton-card" v-for="n in 10" :key="n">
-                    <div class="skeleton-image"></div>
-                    <div class="skeleton-info">
-                        <div class="skeleton-title"></div>
-                        <div class="skeleton-text"></div>
-                    </div>
-                </div>
-            </div>
+            <CommonSkeleton v-if="isLoading" variant="card-grid" :count="10" />
 
             <div v-else class="music-grid">
                 <div class="music-card" v-for="card in cardItems" :key="card.key">
@@ -61,19 +53,7 @@
         </template>
 
         <template v-else-if="activeDiscoverTab === 'newSong'">
-            <div v-if="isLoading" class="song-skeleton">
-                <div v-for="i in 10" :key="i" class="skeleton-item result-item">
-                    <div class="skeleton-cover"></div>
-                    <div class="skeleton-song-info">
-                        <div class="skeleton-line"></div>
-                        <div class="skeleton-line short"></div>
-                    </div>
-                    <div class="skeleton-meta">
-                        <div class="skeleton-line tiny"></div>
-                        <div class="skeleton-line tiny"></div>
-                    </div>
-                </div>
-            </div>
+            <CommonSkeleton v-if="isLoading" variant="song-list" :count="10" />
 
             <div v-else-if="newSongList.length > 0" class="song-section">
                 <SongSearchList :songs="newSongList" @song-click="handleSongClick"
@@ -116,6 +96,7 @@
 import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from 'vue-router';
 import ContextMenu from '../components/ContextMenu.vue';
+import CommonSkeleton from '../components/CommonSkeleton.vue';
 import RankingContent from '../components/RankingContent.vue';
 import SongSearchList from '../components/search/SongSearchList.vue';
 import { get } from '../utils/request';
@@ -733,109 +714,6 @@ watch(() => [route.query.view, route.query.albumType, route.query.songPage], asy
     }
 }
 
-.skeleton-grid {
-    display: flex;
-    gap: 15px;
-    flex-wrap: wrap;
-    justify-content: space-evenly;
-}
-
-.skeleton-card {
-    background-color: #f0f0f0;
-    border-radius: 10px;
-    padding: 10px;
-    width: 200px;
-    text-align: center;
-    height: 250px;
-}
-
-.skeleton-image {
-    width: 100%;
-    height: 200px;
-    background-color: #e0e0e0;
-    border-radius: 8px;
-}
-
-.skeleton-info {
-    margin-top: 10px;
-}
-
-.skeleton-title {
-    width: 60%;
-    height: 16px;
-    background-color: #e0e0e0;
-    margin: 10px auto;
-    border-radius: 4px;
-}
-
-.skeleton-text {
-    width: 80%;
-    height: 12px;
-    background-color: #e0e0e0;
-    margin: 5px auto;
-    border-radius: 4px;
-}
-
-.song-skeleton {
-    width: 100%;
-}
-
-.skeleton-item {
-    margin-bottom: 15px;
-}
-
-.result-item {
-    display: flex;
-    align-items: center;
-    padding: 10px;
-    border-bottom: 1px solid #f0f0f0;
-    border-radius: 5px;
-    gap: 10px;
-}
-
-.skeleton-cover {
-    width: 50px;
-    height: 50px;
-    border-radius: 5px;
-    background: linear-gradient(to right, #f0f0f0 8%, #e0e0e0 18%, #f0f0f0 33%);
-    background-size: 800px 104px;
-    animation: shimmer 1.5s linear infinite forwards;
-}
-
-.skeleton-song-info {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.skeleton-meta {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    min-width: 120px;
-    align-items: flex-end;
-}
-
-.skeleton-line {
-    height: 16px;
-    background: linear-gradient(to right, #f0f0f0 8%, #e0e0e0 18%, #f0f0f0 33%);
-    background-size: 800px 104px;
-    animation: shimmer 1.5s linear infinite forwards;
-    border-radius: 3px;
-    width: 100%;
-    margin-top: 5px;
-
-    &.short {
-        width: 60%;
-    }
-
-    &.tiny {
-        width: 40%;
-        height: 12px;
-    }
-}
-
 .discover-placeholder {
     display: flex;
     justify-content: center;
@@ -860,16 +738,6 @@ watch(() => [route.query.view, route.query.albumType, route.query.songPage], asy
         margin: 0;
         color: #8b8f9c;
         font-size: 14px;
-    }
-}
-
-@keyframes shimmer {
-    0% {
-        background-position: -468px 0;
-    }
-
-    100% {
-        background-position: 468px 0;
     }
 }
 
