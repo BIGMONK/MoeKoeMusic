@@ -3,7 +3,7 @@
 </template>
 
 <script setup>
-import RankingContent from '../components/RankingContent.vue';
+import RankingContent from '../components/discover/RankingContent.vue';
 
 defineProps({
     playerControl: Object

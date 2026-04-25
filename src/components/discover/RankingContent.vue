@@ -74,7 +74,7 @@
 
 <script setup>
 import { computed, ref, nextTick, onMounted, onBeforeUnmount } from 'vue';
-import { get } from '../utils/request';
+import { get } from '../../utils/request';
 
 const props = defineProps({
     playerControl: Object
