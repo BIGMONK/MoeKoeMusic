@@ -6,7 +6,7 @@ import {
     registerProtocolHandler, sendHashAfterLoad, getTray, createMvWindow
 } from './appServices.js';
 import { initializeExtensions, cleanupExtensions } from './extensions/extensions.js';
-import { setupAutoUpdater } from './services/updater.js';
+import { setupAutoUpdater, startUpdateDownload } from './services/updater.js';
 import apiService from './services/apiService.js';
 import statusBarLyricsService from './services/statusBarLyricsService.js';
 import { setupDesktopShortcutIcon } from './services/desktopShortcutIcon.js';
@@ -311,4 +311,8 @@ ipcMain.handle('open-log-path', async (e) => {
 ipcMain.handle('export-log', (e) => {
     try { return { data: exportLog() }; }
     catch (err) { return { error: err }; }
+});
+
+ipcMain.handle('start-update-download', async () => {
+    return await startUpdateDownload();
 });
