@@ -23,7 +23,6 @@
                         v-model="searchQuery"
                         type="text"
                         :placeholder="$t('sou-suo-yin-le-ge-shou-ge-dan')"
-                        :class="searchInputClass"
                         :readonly="searchMode === 'recommend'"
                         @click="getSearch"
                         @keydown.enter="getSearch"
