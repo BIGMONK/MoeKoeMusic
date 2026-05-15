@@ -45,8 +45,14 @@
                 </div>
             </div>
         </div>
-        <h2 v-if="isLoading || listenHistory.length > 0" class="section-title" @click="addAllSongsToQueue">{{ $t('wo-xi-huan-ting') }}</h2>
-        <div v-if="isLoading || listenHistory.length > 0" class="favorite-section">
+        <div v-if="showListenSection" class="favorite-header">
+            <h2 class="section-title" @click="addAllSongsToQueue">{{ $t('wo-xi-huan-ting') }}</h2>
+            <button class="favorite-close-button" type="button" aria-label="close" @click="hideListenSection">
+                <i class="fas fa-times"></i>
+                <span>关闭</span>
+            </button>
+        </div>
+        <div v-if="showListenSection" class="favorite-section">
             <div class="song-list">
                 <CommonSkeleton v-if="isLoading" variant="compact-grid" :count="16" />
                 <ul v-else>
@@ -143,7 +149,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue';
+import { computed, ref, onMounted } from 'vue';
 import { get } from '../utils/request';
 import { MoeAuthStore } from '../stores/store';
 import { useRouter } from 'vue-router';
@@ -165,6 +171,9 @@ const userDetail = ref({}); // 新增：用户详细信息
 const categories = ref([t('wo-chuang-jian-de-ge-dan'), t('wo-shou-cang-de-ge-dan'), t('wo-shou-cang-de-zhuan-ji'), t('wo-guan-zhu-de-ge-shou'), t('wo-guan-zhu-de-hao-you')]);
 const selectedCategory = ref(0);
 const isLoading = ref(true);
+const LISTEN_SECTION_HIDDEN_KEY = 'library:listen-section-hidden';
+const isListenSectionHidden = ref(localStorage.getItem(LISTEN_SECTION_HIDDEN_KEY) === '1');
+const showListenSection = computed(() => !isListenSectionHidden.value && (isLoading.value || listenHistory.value.length > 0));
 
 const selectCategory = (index) => {
     selectedCategory.value = index;
@@ -210,7 +219,8 @@ const getUserDetails = () => {
     // 获取用户详细信息
     getUserDetail();
     // 获取用户听歌历史
-    getlisten().finally(() => {
+    const listenTask = isListenSectionHidden.value ? Promise.resolve() : getlisten();
+    listenTask.finally(() => {
         isLoading.value = false;
     })
     // 获取用户创建和收藏的歌单
@@ -252,6 +262,12 @@ const getlisten = async () => {
         const shuffled = allLists.sort(() => 0.5 - Math.random());
         listenHistory.value = shuffled.slice(0, 16);
     }
+}
+const hideListenSection = () => {
+    localStorage.setItem(LISTEN_SECTION_HIDDEN_KEY, '1');
+    isListenSectionHidden.value = true;
+    listenHistory.value = [];
+    isLoading.value = false;
 }
 const getfollow = async () => {
     const followResponse = await get('/user/follow');
@@ -409,11 +425,36 @@ const addAllSongsToQueue = () => {
 .section-title {
     font-size: 28px;
     font-weight: bold;
-    margin-bottom: 30px;
     color: var(--primary-color);
     cursor: cell;
     margin-bottom: 0px;
     display: inline-block;
+}
+
+.favorite-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.favorite-close-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 0;
+    border: none!important;
+    background-color: transparent!important;
+    color: transparent!important;
+    cursor: pointer;
+    transition: color 0.2s ease;
+
+    &:is(.dark .favorite-close-button ){
+        background-color: transparent!important;
+    }
+
+    &:hover {
+        color: #8a8a8a!important;
+    }
 }
 
 .profile-section {
