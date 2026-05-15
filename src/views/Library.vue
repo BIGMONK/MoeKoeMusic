@@ -1,8 +1,14 @@
 <template>
     <div class="library-page">
         <div class="profile-section">
-            <div class="profile-header"
-                :style="`background-image: url(${userDetail.bg_pic || './assets/images/banner.png'})`">
+            <div class="profile-header" :style="profileHeaderStyle">
+                <div class="profile-background-image-wrap">
+                    <div class="profile-background-image"></div>
+                </div>
+                <div class="profile-background-main"></div>
+                <div class="profile-background-top"></div>
+                <div class="profile-background-bottom"></div>
+                <div class="profile-background-right"></div>
                 <div class="profile-info">
                     <img class="profile-pic" :src="user.pic" :alt="$t('yong-hu-tou-xiang')" />
                     <div class="user-details">
@@ -151,6 +157,7 @@
 <script setup>
 import { computed, ref, onMounted } from 'vue';
 import { get } from '../utils/request';
+import { getProfileBgColor } from '../utils/utils';
 import { MoeAuthStore } from '../stores/store';
 import { useRouter } from 'vue-router';
 import { useI18n } from 'vue-i18n';
@@ -172,8 +179,15 @@ const categories = ref([t('wo-chuang-jian-de-ge-dan'), t('wo-shou-cang-de-ge-dan
 const selectedCategory = ref(0);
 const isLoading = ref(true);
 const LISTEN_SECTION_HIDDEN_KEY = 'library:listen-section-hidden';
+const DEFAULT_PROFILE_BG_COLOR = 'rgb(44, 32, 34)';
 const isListenSectionHidden = ref(localStorage.getItem(LISTEN_SECTION_HIDDEN_KEY) === '1');
 const showListenSection = computed(() => !isListenSectionHidden.value && (isLoading.value || listenHistory.value.length > 0));
+const profileBgColor = ref(DEFAULT_PROFILE_BG_COLOR);
+const profileBackgroundImage = ref('');
+const profileHeaderStyle = computed(() => ({
+    '--profile-bg-image': profileBackgroundImage.value ? `url(${profileBackgroundImage.value})` : 'none',
+    '--profile-bg-color': profileBgColor.value
+}));
 
 const selectCategory = (index) => {
     selectedCategory.value = index;
@@ -198,6 +212,21 @@ const formatRegTime = (timestamp) => {
     const now = new Date();
     const years = now.getFullYear() - registerDate.getFullYear();
     return `${t('le-ling')} ${years} ${t('nian')}`;
+};
+
+const updateProfileBackground = (src) => {
+    const targetSrc = src;
+    const image = new Image();
+    image.onload = () => {
+        profileBackgroundImage.value = targetSrc;
+    };
+    image.src = targetSrc;
+    profileBgColor.value = DEFAULT_PROFILE_BG_COLOR;
+    getProfileBgColor(targetSrc).then(color => {
+        profileBgColor.value = color;
+    }).catch(() => {
+        profileBgColor.value = DEFAULT_PROFILE_BG_COLOR;
+    });
 };
 
 const playSong = (hash, name, img, author) => {
@@ -236,6 +265,7 @@ const getUserDetail = async () => {
         const detailResponse = await get('/user/detail');
         if (detailResponse.status === 1) {
             userDetail.value = detailResponse.data;
+            updateProfileBackground(userDetail.value.bg_pic || './assets/images/banner.png');
         }
     } catch (error) {
         console.error('Failed to get user details:', error);
@@ -465,8 +495,7 @@ const addAllSongsToQueue = () => {
 .profile-header {
     width: 100%;
     height: 100%;
-    background-size: cover;
-    background-position: center;
+    min-height: 164px;
     border-radius: 15px;
     margin-bottom: 20px;
     display: flex;
@@ -474,20 +503,72 @@ const addAllSongsToQueue = () => {
     padding: 20px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     position: relative;
-    overflow: visible;
+    overflow: hidden;
     transition: background-image 1s ease-in-out;
+    background-color: var(--profile-bg-color);
+}
 
-    &::before {
-        content: '';
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.6) 100%);
-        border-radius: 15px;
-        z-index: 1;
-    }
+.profile-background-image-wrap,
+.profile-background-main,
+.profile-background-top,
+.profile-background-bottom,
+.profile-background-right {
+    position: absolute;
+    top: 0;
+    right: 0;
+    border-radius: 15px;
+    pointer-events: none;
+}
+
+.profile-background-image-wrap {
+    width: min(46%, 680px);
+    height: 100%;
+    z-index: 0;
+    overflow: hidden;
+}
+
+.profile-background-image {
+    width: 100%;
+    height: calc(100% + 96px);
+    margin-top: -48px;
+    background-image: var(--profile-bg-image);
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+    opacity: 0.42;
+}
+
+.profile-background-main {
+    inset: 0;
+    background-image: linear-gradient(90deg,
+            var(--profile-bg-color) 0%,
+            var(--profile-bg-color) 54%,
+            rgba(28, 26, 34, 0.68) 76%,
+            rgba(28, 26, 34, 0.18) 100%);
+    z-index: 1;
+}
+
+.profile-background-top {
+    inset: 0;
+    background-image: linear-gradient(180deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0) 46%);
+    z-index: 2;
+}
+
+.profile-background-bottom {
+    left: 0;
+    width: 100%;
+    height: 58%;
+    top: auto;
+    bottom: 0;
+    background-image: linear-gradient(180deg, rgba(15, 16, 22, 0) 0%, rgba(15, 16, 22, 0.6) 100%);
+    z-index: 2;
+}
+
+.profile-background-right {
+    width: 220px;
+    height: 100%;
+    background-image: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.08) 100%);
+    z-index: 2;
 }
 
 .profile-info {
@@ -497,7 +578,7 @@ const addAllSongsToQueue = () => {
     color: white;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
     width: 100%;
-    z-index: 2;
+    z-index: 3;
 }
 
 .profile-pic {
