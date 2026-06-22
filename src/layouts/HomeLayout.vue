@@ -5,7 +5,9 @@
         <div v-if="!isOnline" class="network-status">
             网络连接已断开
         </div>
-        <router-view :playerControl="playerControl"></router-view>
+        <div class="main-content-shell">
+            <router-view :playerControl="playerControl"></router-view>
+        </div>
     </main>
     <PlayerControl ref="playerControl" />
     <OnboardingGuide />
@@ -148,20 +150,29 @@ body {
 
 main {
     min-height: calc(100vh - 80px - 188px);
-    max-width: 1200px;
-    margin: 0 auto;
+    width: 100%;
+    margin: 0;
     margin-bottom: 150px;
     padding-top: 80px;
     padding-bottom: 150px;
+    box-sizing: border-box;
+}
+
+.main-content-shell {
+    width: min(1200px, 100%);
+    margin: 0 auto;
 }
 
 main.side-navigation-main-content {
-    margin-left: 226px;
+    --side-main-width: 226px;
+    width: calc(100% - var(--side-main-width));
+    margin-left: var(--side-main-width);
+    margin-right: 0;
     padding-top: 52px;
 }
 
 main.side-navigation-main-content.collapsed {
-    margin-left: 64px;
+    --side-main-width: 64px;
 }
 
 a {
