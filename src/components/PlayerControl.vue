@@ -584,7 +584,7 @@ const getCurrentLineIndex = (currentTime) => {
 };
 
 const progressBar = useProgressBar(audio, resetLyricsHighlight);
-const { progressWidth, isProgressDragging, showTimeTooltip, tooltipPosition, tooltipTime, climaxPoints, formatTime, getMusicHighlights, onProgressDragStart, updateProgressFromEvent, updateTimeTooltip, hideTimeTooltip } = progressBar;
+const { progressWidth, isProgressDragging, showTimeTooltip, tooltipPosition, tooltipTime, climaxPoints, formatTime, getMusicHighlights, clearMusicHighlights, onProgressDragStart, updateProgressFromEvent, updateTimeTooltip, hideTimeTooltip } = progressBar;
 
 const playbackMode = usePlaybackMode(t, audio);
 const { playbackModes, currentPlaybackModeIndex, currentPlaybackMode, playedSongsStack, currentStackIndex, togglePlaybackMode, setPlaybackMode } = playbackMode;
@@ -593,6 +593,21 @@ const mediaSession = useMediaSession();
 
 const songQueue = useSongQueue(t, musicQueueStore, queueList);
 const { currentSong, NextSong, addSongToQueue, addCloudMusicToQueue, addLocalMusicToQueue, addLocalPlaylistToQueue, addToNext, getPlaylistAllSongs, addPlaylistToQueue, addCloudPlaylistToQueue, restoreLocalSongCover } = songQueue;
+
+const resetTrackTimeline = () => {
+    currentTime.value = 0;
+    progressWidth.value = 0;
+    clearMusicHighlights();
+    resetLyricsHighlight(0);
+    localStorage.setItem('player_progress', '0');
+};
+
+watch(
+    () => currentSong.value?.hash || '',
+    (hash, previousHash) => {
+        if (previousHash && hash !== previousHash) resetTrackTimeline();
+    }
+);
 
 let lyricsBackgroundCarouselTimer = null;
 let lyricsCoverImagesRequestId = 0;
@@ -867,6 +882,8 @@ const playSong = async (song) => {
             return;
         }
 
+        resetTrackTimeline();
+
         currentSong.value = structuredClone(toPlayerSong(song));
 
         // 应用响度规格化（如果已启用 Web Audio）
@@ -946,7 +963,8 @@ const playSong = async (song) => {
         getVip();
         // 获取歌词
         getCurrentLyrics();
-        getMusicHighlights(currentSong.value.hash);
+        const highlightHash = currentSong.value.hash;
+        getMusicHighlights(highlightHash, () => currentSong.value?.hash === highlightHash);
     } catch (error) {
         console.error('[PlayerControl] 播放音乐时发生错误:', error);
         playing.value = false;
